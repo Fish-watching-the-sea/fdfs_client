@@ -28,9 +28,10 @@ type connPool struct {
 	count    int
 	lock     *sync.RWMutex
 	finish   chan bool
+	connectTimeOut int
 }
 
-func newConnPool(addr string, maxConns int) (*connPool, error) {
+func newConnPool(addr string, maxConns, connectTimeOut int) (*connPool, error) {
 	if maxConns < MAXCONNS_LEAST {
 		return nil, fmt.Errorf("too little maxConns < %d", MAXCONNS_LEAST)
 	}
@@ -40,6 +41,7 @@ func newConnPool(addr string, maxConns int) (*connPool, error) {
 		maxConns: maxConns,
 		lock:     &sync.RWMutex{},
 		finish:   make(chan bool),
+		connectTimeOut: connectTimeOut,
 	}
 	go func() {
 		timer := time.NewTimer(time.Second * 20)
@@ -101,7 +103,7 @@ func (this *connPool) CheckConns() error {
 }
 
 func (this *connPool) makeConn() error {
-	conn, err := net.DialTimeout("tcp", this.addr, time.Second*10)
+	conn, err := net.DialTimeout("tcp", this.addr, time.Second*time.Duration(this.connectTimeOut))
 	if err != nil {
 		return err
 	}
